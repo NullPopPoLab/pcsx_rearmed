@@ -2695,18 +2695,18 @@ static void loadPSXBios(void)
       if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
       {
          unsigned i;
-         snprintf(Config.BiosDir, sizeof(Config.BiosDir), "%s", dir);
+         snprintf(Config.BiosDir, sizeof(Config.BiosDir), "%s%cpsx", dir, SLASH);
 
          for (i = 0; i < sizeof(bios) / sizeof(bios[0]); i++)
          {
-            snprintf(path, sizeof(path), "%s%c%s.bin", dir, SLASH, bios[i]);
+            snprintf(path, sizeof(path), "%s%c%s.bin", Config.BiosDir, SLASH, bios[i]);
             found_bios = try_use_bios(path);
             if (found_bios)
                break;
          }
 
          if (!found_bios)
-            found_bios = find_any_bios(dir, path, sizeof(path));
+            found_bios = find_any_bios(Config.BiosDir, path, sizeof(path));
       }
       if (found_bios)
       {
