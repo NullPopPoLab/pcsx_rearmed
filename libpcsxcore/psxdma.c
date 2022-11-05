@@ -45,7 +45,7 @@ void psxDma4(u32 madr, u32 bcr, u32 chcr) { // SPU
 			PSXDMA_LOG("*** DMA4 SPU - mem2spu *** %x addr = %x size = %x\n", chcr, madr, bcr);
 #endif
 			ptr = (u16 *)PSXM(madr);
-			if (ptr == NULL) {
+			if (ptr == INVALID_PTR) {
 #ifdef CPU_LOG
 				CPU_LOG("*** DMA4 SPU - mem2spu *** NULL Pointer!!!\n");
 #endif
@@ -62,7 +62,7 @@ void psxDma4(u32 madr, u32 bcr, u32 chcr) { // SPU
 			PSXDMA_LOG("*** DMA4 SPU - spu2mem *** %x addr = %x size = %x\n", chcr, madr, bcr);
 #endif
 			ptr = (u16 *)PSXM(madr);
-			if (ptr == NULL) {
+			if (ptr == INVALID_PTR) {
 #ifdef CPU_LOG
 				CPU_LOG("*** DMA4 SPU - spu2mem *** NULL Pointer!!!\n");
 #endif
@@ -138,7 +138,7 @@ void psxDma2(u32 madr, u32 bcr, u32 chcr) { // GPU
 			PSXDMA_LOG("*** DMA2 GPU - vram2mem *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
 #endif
 			ptr = (u32 *)PSXM(madr);
-			if (ptr == NULL) {
+			if (ptr == INVALID_PTR) {
 #ifdef CPU_LOG
 				CPU_LOG("*** DMA2 GPU - vram2mem *** NULL Pointer!!!\n");
 #endif
@@ -160,7 +160,7 @@ void psxDma2(u32 madr, u32 bcr, u32 chcr) { // GPU
 			PSXDMA_LOG("*** DMA 2 - GPU mem2vram *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
 #endif
 			ptr = (u32 *)PSXM(madr);
-			if (ptr == NULL) {
+			if (ptr == INVALID_PTR) {
 #ifdef CPU_LOG
 				CPU_LOG("*** DMA2 GPU - mem2vram *** NULL Pointer!!!\n");
 #endif
@@ -184,7 +184,7 @@ void psxDma2(u32 madr, u32 bcr, u32 chcr) { // GPU
 			size = GPU_dmaChain((u32 *)psxM, madr & 0x1fffff);
 			if ((int)size <= 0)
 				size = gpuDmaChainSize(madr);
-			HW_GPU_STATUS &= ~PSXGPU_nBUSY;
+			HW_GPU_STATUS &= SWAP32(~PSXGPU_nBUSY);
 
 			// we don't emulate progress, just busy flag and end irq,
 			// so pretend we're already at the last block
@@ -216,7 +216,7 @@ void gpuInterrupt() {
 		HW_DMA2_CHCR &= SWAP32(~0x01000000);
 		DMA_INTERRUPT(2);
 	}
-	HW_GPU_STATUS |= PSXGPU_nBUSY; // GPU no longer busy
+	HW_GPU_STATUS |= SWAP32(PSXGPU_nBUSY); // GPU no longer busy
 }
 
 void psxDma6(u32 madr, u32 bcr, u32 chcr) {
@@ -228,7 +228,7 @@ void psxDma6(u32 madr, u32 bcr, u32 chcr) {
 #endif
 
 	if (chcr == 0x11000002) {
-		if (mem == NULL) {
+		if (mem == INVALID_PTR) {
 #ifdef CPU_LOG
 			CPU_LOG("*** DMA6 OT *** NULL Pointer!!!\n");
 #endif
@@ -244,7 +244,7 @@ void psxDma6(u32 madr, u32 bcr, u32 chcr) {
 			*mem-- = SWAP32((madr - 4) & 0xffffff);
 			madr -= 4;
 		}
-		mem++; *mem = 0xffffff;
+		*++mem = SWAP32(0xffffff);
 
 		//GPUOTCDMA_INT(size);
 		// halted

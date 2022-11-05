@@ -299,19 +299,19 @@ void psxRcntUpdate()
     cycle = psxRegs.cycle;
 
     // rcnt 0.
-    if( cycle - rcnts[0].cycleStart >= rcnts[0].cycle )
+    while( cycle - rcnts[0].cycleStart >= rcnts[0].cycle )
     {
         psxRcntReset( 0 );
     }
 
     // rcnt 1.
-    if( cycle - rcnts[1].cycleStart >= rcnts[1].cycle )
+    while( cycle - rcnts[1].cycleStart >= rcnts[1].cycle )
     {
         psxRcntReset( 1 );
     }
 
     // rcnt 2.
-    if( cycle - rcnts[2].cycleStart >= rcnts[2].cycle )
+    while( cycle - rcnts[2].cycleStart >= rcnts[2].cycle )
     {
         psxRcntReset( 2 );
     }
@@ -327,7 +327,7 @@ void psxRcntUpdate()
         // VSync irq.
         if( hSyncCount == VBlankStart )
         {
-            HW_GPU_STATUS &= ~PSXGPU_LCF;
+            HW_GPU_STATUS &= SWAP32(~PSXGPU_LCF);
             GPU_vBlank( 1, 0 );
             setIrq( 0x01 );
 
@@ -347,9 +347,9 @@ void psxRcntUpdate()
             frame_counter++;
 
             gpuSyncPluginSR();
-            if( (HW_GPU_STATUS & PSXGPU_ILACE_BITS) == PSXGPU_ILACE_BITS )
-                HW_GPU_STATUS |= frame_counter << 31;
-            GPU_vBlank( 0, HW_GPU_STATUS >> 31 );
+            if ((HW_GPU_STATUS & SWAP32(PSXGPU_ILACE_BITS)) == SWAP32(PSXGPU_ILACE_BITS))
+                HW_GPU_STATUS |= SWAP32(frame_counter << 31);
+            GPU_vBlank(0, SWAP32(HW_GPU_STATUS) >> 31);
         }
 
         // Schedule next call, in hsyncs
