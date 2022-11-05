@@ -19,11 +19,7 @@
 
 #include <lightning.h>
 #include <lightning/jit_private.h>
-#ifdef _WIN32
-#  include <mman.h>
-#else
-#  include <sys/mman.h>
-#endif
+#include <sys/mman.h>
 #if defined(__sgi)
 #  include <fcntl.h>
 #endif
@@ -1439,6 +1435,7 @@ _jit_classify(jit_state_t *_jit, jit_code_t code)
 	case jit_code_unordi_d:
 	    mask = jit_cc_a0_reg|jit_cc_a0_chg|jit_cc_a1_reg|jit_cc_a2_dbl;
 	    break;
+	case jit_code_movnr:	case jit_code_movzr:
 	case jit_code_addr:	case jit_code_addxr:	case jit_code_addcr:
 	case jit_code_subr:	case jit_code_subxr:	case jit_code_subcr:
 	case jit_code_mulr:	case jit_code_divr:	case jit_code_divr_u:

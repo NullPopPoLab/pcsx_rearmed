@@ -88,7 +88,7 @@ libpcsxcore/psxbios.o: CFLAGS += -Wno-nonnull
 
 # dynarec
 ifeq "$(DYNAREC)" "lightrec"
-CFLAGS += -Ideps/lightning/include -Ideps/lightrec \
+CFLAGS += -Ideps/lightning/include -Ideps/lightrec -Iinclude/lightning -Iinclude/lightrec \
 		  -DLIGHTREC -DLIGHTREC_STATIC
 OBJS += libpcsxcore/lightrec/plugin.o
 OBJS += deps/lightning/lib/jit_disasm.o \
@@ -109,7 +109,7 @@ OBJS += deps/lightning/lib/jit_disasm.o \
 		deps/lightrec/recompiler.o \
 		deps/lightrec/reaper.o
 ifeq ($(MMAP_WIN32),1)
-CFLAGS += -Ideps/mman
+CFLAGS += -Iinclude/mman
 OBJS += deps/mman/mman.o
 endif
 else ifeq "$(DYNAREC)" "ari64"
@@ -366,7 +366,7 @@ libpcsxcore/gte_nf.o: libpcsxcore/gte.c
 	$(CC) -c -o $@ $^ $(CFLAGS) -DFLAGLESS
 
 frontend/revision.h: FORCE
-	@(git describe || echo) | sed -e 's/.*/#define REV "\0"/' > $@_
+	@(git describe --always || echo) | sed -e 's/.*/#define REV "\0"/' > $@_
 	@diff -q $@_ $@ > /dev/null 2>&1 || cp $@_ $@
 	@rm $@_
 
@@ -410,7 +410,7 @@ endif
 
 # ----------- release -----------
 
-VER ?= $(shell git describe HEAD)
+VER ?= $(shell git describe --always HEAD)
 
 ifeq "$(PLATFORM)" "generic"
 OUT = pcsx_rearmed_$(VER)

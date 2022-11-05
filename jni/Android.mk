@@ -1,6 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 
-$(shell cd "$(LOCAL_PATH)" && ((git describe || echo) | sed -e 's/.*/#define REV "\0"/' > ../frontend/revision.h_))
+$(shell cd "$(LOCAL_PATH)" && ((git describe --always || echo) | sed -e 's/.*/#define REV "\0"/' > ../frontend/revision.h_))
 $(shell cd "$(LOCAL_PATH)" && (diff -q ../frontend/revision.h_ ../frontend/revision.h > /dev/null 2>&1 || cp ../frontend/revision.h_ ../frontend/revision.h))
 $(shell cd "$(LOCAL_PATH)" && (rm ../frontend/revision.h_))
 
@@ -141,7 +141,9 @@ endif
 ifeq ($(HAVE_LIGHTREC),1)
   COREFLAGS   += -DLIGHTREC -DLIGHTREC_STATIC
   EXTRA_INCLUDES += $(DEPS_DIR)/lightning/include \
-						  $(DEPS_DIR)/lightrec
+		    $(DEPS_DIR)/lightrec \
+		    $(ROOT_DIR)/include/lightning \
+		    $(ROOT_DIR)/include/lightrec
   SOURCES_C   += $(DEPS_DIR)/lightrec/blockcache.c \
 					  $(DEPS_DIR)/lightrec/disassembler.c \
 					  $(DEPS_DIR)/lightrec/emitter.c \

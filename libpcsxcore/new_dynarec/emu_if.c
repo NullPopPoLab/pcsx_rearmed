@@ -67,22 +67,18 @@ static irq_func * const irq_funcs[] = {
 /* local dupe of psxBranchTest, using event_cycles */
 static void irq_test(void)
 {
-	u32 irqs = psxRegs.interrupt;
 	u32 cycle = psxRegs.cycle;
 	u32 irq, irq_bits;
 
-	// irq_funcs() may queue more irqs
-	psxRegs.interrupt = 0;
-
-	for (irq = 0, irq_bits = irqs; irq_bits != 0; irq++, irq_bits >>= 1) {
+	for (irq = 0, irq_bits = psxRegs.interrupt; irq_bits != 0; irq++, irq_bits >>= 1) {
 		if (!(irq_bits & 1))
 			continue;
 		if ((s32)(cycle - event_cycles[irq]) >= 0) {
-			irqs &= ~(1 << irq);
+			// note: irq_funcs() also modify psxRegs.interrupt
+			psxRegs.interrupt &= ~(1u << irq);
 			irq_funcs[irq]();
 		}
 	}
-	psxRegs.interrupt |= irqs;
 
 	if ((psxHu32(0x1070) & psxHu32(0x1074)) && (Status & 0x401) == 0x401) {
 		psxException(0x400, 0);
@@ -300,7 +296,6 @@ static int ari64_init()
 	static u32 scratch_buf[8*8*2] __attribute__((aligned(64)));
 	extern void (*psxCP2[64])();
 	extern void psxNULL();
-	extern unsigned char *out;
 	size_t i;
 
 	new_dynarec_init();
@@ -330,10 +325,6 @@ static int ari64_init()
 	zeromem_ptr = zero_mem;
 	scratch_buf_ptr = scratch_buf;
 
-	SysPrintf("Mapped (RAM/scrp/ROM/LUTs/TC):\n");
-	SysPrintf("%p/%p/%p/%p/%p\n",
-		psxM, psxH, psxR, mem_rtab, out);
-
 	return 0;
 }
 
@@ -341,7 +332,7 @@ static void ari64_reset()
 {
 	printf("ari64_reset\n");
 	new_dyna_pcsx_mem_reset();
-	invalidate_all_pages();
+	new_dynarec_invalidate_all_pages();
 	new_dyna_restore();
 	pending_exception = 1;
 }
@@ -371,21 +362,11 @@ static void ari64_execute()
 
 static void ari64_clear(u32 addr, u32 size)
 {
-	u32 start, end, main_ram;
-
 	size *= 4; /* PCSX uses DMA units (words) */
 
 	evprintf("ari64_clear %08x %04x\n", addr, size);
 
-	/* check for RAM mirrors */
-	main_ram = (addr & 0xffe00000) == 0x80000000;
-
-	start = addr >> 12;
-	end = (addr + size) >> 12;
-
-	for (; start <= end; start++)
-		if (!main_ram || !invalid_code[start])
-			invalidate_block(start);
+	new_dynarec_invalidate_range(addr, addr + size);
 }
 
 static void ari64_notify(int note, void *data) {
@@ -452,15 +433,14 @@ int new_dynarec_hacks;
 void *psxH_ptr;
 void *zeromem_ptr;
 u8 zero_mem[0x1000];
-unsigned char *out;
 void *mem_rtab;
 void *scratch_buf_ptr;
 void new_dynarec_init() {}
 void new_dyna_start(void *context) {}
 void new_dynarec_cleanup() {}
 void new_dynarec_clear_full() {}
-void invalidate_all_pages() {}
-void invalidate_block(unsigned int block) {}
+void new_dynarec_invalidate_all_pages() {}
+void new_dynarec_invalidate_range(unsigned int start, unsigned int end) {}
 void new_dyna_pcsx_mem_init(void) {}
 void new_dyna_pcsx_mem_reset(void) {}
 void new_dyna_pcsx_mem_load_state(void) {}
@@ -477,7 +457,7 @@ u32 irq_test_cycle;
 u32 handler_cycle;
 u32 last_io_addr;
 
-static void dump_mem(const char *fname, void *mem, size_t size)
+void dump_mem(const char *fname, void *mem, size_t size)
 {
 	FILE *f1 = fopen(fname, "wb");
 	if (f1 == NULL)
@@ -662,7 +642,7 @@ void do_insn_cmp(void)
 
 	psxRegs.code = rregs.code; // don't care
 	psxRegs.cycle += last_count;
-	//psxRegs.cycle = rregs.cycle;
+	//psxRegs.cycle = rregs.cycle; // needs reload in _cmp
 	psxRegs.CP0.r[9] = rregs.CP0.r[9]; // Count
 
 	//if (psxRegs.cycle == 166172) breakme();
@@ -719,9 +699,9 @@ void do_insn_cmp(void)
 	for (i = 0; i < 8; i++)
 		printf("r%d=%08x r%2d=%08x r%2d=%08x r%2d=%08x\n", i, allregs_p[i],
 			i+8, allregs_p[i+8], i+16, allregs_p[i+16], i+24, allregs_p[i+24]);
-	printf("PC: %08x/%08x, cycle %u\n", psxRegs.pc, ppc, psxRegs.cycle);
-	dump_mem("/mnt/ntz/dev/pnd/tmp/psxram.dump", psxM, 0x200000);
-	dump_mem("/mnt/ntz/dev/pnd/tmp/psxregs.dump", psxH, 0x10000);
+	printf("PC: %08x/%08x, cycle %u, next %u\n", psxRegs.pc, ppc, psxRegs.cycle, next_interupt);
+	//dump_mem("/tmp/psxram.dump", psxM, 0x200000);
+	//dump_mem("/mnt/ntz/dev/pnd/tmp/psxregs.dump", psxH, 0x10000);
 	exit(1);
 ok:
 	//psxRegs.cycle = rregs.cycle + 2; // sync timing
